@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import axios, { AxiosError } from 'axios';
+import  { AxiosError } from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faLock, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { useLoginUserMutation } from '../../Services/loginServices';
 
 interface ErrorResponse {
     error: {
@@ -12,6 +13,8 @@ interface ErrorResponse {
         message?: string;
     };
 }
+
+// Define the type for Axios errors
 type CustomAxiosError = AxiosError<ErrorResponse>;
 
 const LoginPage: React.FC = () => {
@@ -21,6 +24,7 @@ const LoginPage: React.FC = () => {
     const [passwordError, setPasswordError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
+    const [login, { isLoading }] = useLoginUserMutation();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -42,26 +46,26 @@ const LoginPage: React.FC = () => {
         }
 
         try {
-            const response = await axios.post('https://r18brnk5-5000.inc1.devtunnels.ms/login/', {
-                email: email,
-                password: password,
-            });
-
-            if (response.data.success) {
+            const response = await login({ email, password }).unwrap();
+            console.log(response, "response")
+            if (response.success) {
                 toast.success('Logged in successfully!');
-                localStorage.setItem('token', response?.data?.token);
+                navigate('/ProductList');
+                // Set Token In LocalStorage
+                localStorage.setItem('token', response.token);
             } else {
                 toast.error('Login failed. Please check your credentials.');
             }
         } catch (error) {
             const axiosError = error as CustomAxiosError;
             if (axiosError.response && axiosError.response.data && axiosError.response.data.error) {
-                toast.error(axiosError.response.data.error.message || 'An error occurred. Please try again.');
+                toast.error(axiosError.response.data.error.message || 'Invalid Credentials.');
             } else {
-                toast.error('An error occurred. Please try again.');
+                toast.error('Invalid Credentials');
             }
         }
     };
+
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
     };
@@ -89,9 +93,7 @@ const LoginPage: React.FC = () => {
                         {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
                     </div>
                     <div className="relative">
-                        <label className="block text-sm font-medium text-gray-700">
-                            Password
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700">Password</label>
                         <div className="relative">
                             <input
                                 placeholder="Please enter password"
@@ -104,7 +106,6 @@ const LoginPage: React.FC = () => {
                                 className="w-full px-3 py-2 pl-10 pr-10 border rounded-md shadow-sm focus:outline-none focus:border-blue-500 focus:ring-1 sm:text-sm"
                             />
                             <FontAwesomeIcon icon={faLock} className="absolute left-3 top-2 text-gray-400" />
-
                             <FontAwesomeIcon
                                 icon={showPassword ? faEyeSlash : faEye}
                                 className="absolute right-3 top-2 cursor-pointer text-gray-400"
@@ -117,12 +118,12 @@ const LoginPage: React.FC = () => {
                         type="submit"
                         className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
-                        Login
+                        {isLoading ? 'Loading...' : 'Login'}
                     </button>
                     <p>
                         Don't have an account?{' '}
                         <button onClick={() => navigate('/Register')} className="text-sky-600">
-                            Register one !
+                            Register one!
                         </button>
                     </p>
                 </form>

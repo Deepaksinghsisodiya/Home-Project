@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import axios, { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faEnvelope, faLock, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { AxiosError } from 'axios';
+import { useRegisterUserMutation } from '../../Services/registerServices';
 
 // Define the expected structure of the error response
 interface ErrorResponse {
@@ -17,7 +18,7 @@ interface ErrorResponse {
 // Define the type for Axios errors
 type CustomAxiosError = AxiosError<ErrorResponse>;
 
-const App: React.FC = () => {
+const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -26,32 +27,37 @@ const App: React.FC = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [registerUser, { isLoading }] = useRegisterUserMutation();
+
+  const resetErrors = () => {
+    setFullNameError('');
+    setEmailError('');
+    setPasswordError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    resetErrors();
 
     if (!fullName || !email || !password) {
-      setFullNameError(fullName ? '' : 'Full name is required.');
-      setEmailError(email ? '' : 'Email is required.');
-      setPasswordError(password ? '' : 'Password is required.');
+      if (!fullName) setFullNameError('Full name is required.');
+      if (!email) setEmailError('Email is required.');
+      if (!password) setPasswordError('Password is required.');
       return;
     }
 
     try {
-      const response = await axios.post('https://r18brnk5-5000.inc1.devtunnels.ms/register/', {
-        fullName: fullName,
-        email: email,
-        password: password,
-      });
-
-      if (response.data.success) {
+      const response = await registerUser({ fullName, email, password }).unwrap();
+      console.log(response, "response")
+      if (response.success) {
         toast.success('Registered successfully!');
-        navigate('/');
+        navigate('/Login');
       } else {
         toast.error('Registration failed. Please try again.');
       }
     } catch (error) {
       const axiosError = error as CustomAxiosError;
+      console.error('Registration error:', axiosError);
       if (axiosError.response && axiosError.response.data && axiosError.response.data.error) {
         if (axiosError.response.data.error.code === 11000) {
           toast.error('Email already exists. Please use a different email.');
@@ -74,9 +80,7 @@ const App: React.FC = () => {
         <h2 className="text-2xl font-bold text-center">Register</h2>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700">
-              Full Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Full Name</label>
             <div className='relative'>
               <input
                 placeholder="Please enter full name"
@@ -93,9 +97,7 @@ const App: React.FC = () => {
             {fullNameError && <p className="text-red-500 text-sm">{fullNameError}</p>}
           </div>
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
             <div className="relative">
               <input
                 placeholder="Please enter email"
@@ -108,14 +110,11 @@ const App: React.FC = () => {
                 className="w-full px-3 py-2 pl-10 border rounded-md shadow-sm focus:outline-none focus:border-blue-500 focus:ring-1 sm:text-sm"
               />
               <FontAwesomeIcon icon={faEnvelope} className="absolute left-3 top-2 text-gray-400" />
-
             </div>
             {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
           </div>
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Password</label>
             <div className="relative">
               <input
                 placeholder="Please enter password"
@@ -128,7 +127,6 @@ const App: React.FC = () => {
                 className="w-full px-3 py-2 pl-10 pr-10 border rounded-md shadow-sm focus:outline-none focus:border-blue-500 focus:ring-1 sm:text-sm"
               />
               <FontAwesomeIcon icon={faLock} className="absolute left-3 top-2 text-gray-400" />
-
               <FontAwesomeIcon
                 icon={showPassword ? faEyeSlash : faEye}
                 className="absolute right-3 top-2 cursor-pointer text-gray-400"
@@ -141,7 +139,7 @@ const App: React.FC = () => {
             type="submit"
             className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            Register
+            {isLoading ? 'Loading...' : 'Register'}
           </button>
         </form>
       </div>
@@ -150,4 +148,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default RegisterPage;
